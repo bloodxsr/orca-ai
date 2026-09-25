@@ -1,128 +1,125 @@
-#  ORCA - Maritime Intelligence Platform Complete Setup Guide
+# ORCA - Maritime Intelligence Platform Complete Setup Guide
 
-Welcome to **ORCA**! This guide is written specifically for beginners. Follow these step-by-step instructions carefully, and you will have the entire platform running on your computer in just a few minutes. 
+Welcome to **ORCA**! This guide covers how to set up the entire platform locally, run the models, and host the services (Frontend, Backend, and AI Engine).
 
 ---
 
-##  Step 1: Install Required Software (Prerequisites)
-Before running the code, you need to install a few foundational tools. If you already have these, you can skip to Step 2.
+## Step 1: Install Required Software (Prerequisites)
 
 1. **Docker Desktop** (Runs our databases)
    - Download and install from [Docker's official website](https://www.docker.com/products/docker-desktop).
    - *Note: Leave it running in the background.*
 2. **Node.js** (Runs our frontend website)
-   - Download the "LTS" (Long Term Support) version from [Nodejs.org](https://nodejs.org/).
-   - Just click through the standard installer.
+   - Download the "LTS" version from [Nodejs.org](https://nodejs.org/).
 3. **Rust** (Runs our backend server)
-   - Go to [rustup.rs](https://rustup.rs/).
-   - Follow the instructions to download and install the Rust compiler.
+   - Go to [rustup.rs](https://rustup.rs/) and install.
 4. **Python & uv** (Runs our AI/ML service)
-   - Install Python from [python.org](https://python.org).
-   - Install `uv` (a super-fast Python package manager) by opening your terminal and running: 
-     ```bash
-     pip install uv
-     ```
+   - Install Python.
+   - Install `uv` by opening your terminal and running: `pip install uv`
 
 ---
 
-##  Step 2: Start the AI/ML Service
-ORCA uses a Python AI service to analyze satellite images. We need to set this up first using `uv`.
-
-1. Open your terminal and navigate to this **main `orca` folder**:
-   ```bash
-   cd path/to/orca
-   ```
-2. Create a virtual environment using `uv`:
-   ```bash
-   uv venv
-   ```
-3. Activate the virtual environment:
-   - **On Windows**:
-     ```bash
-     .venv\Scripts\activate
-     ```
-   - **On Mac/Linux**:
-     ```bash
-     source .venv/bin/activate
-     ```
-4. Install the required AI packages extremely fast using `uv`:
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-5. Start the ML service:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-   *(Or simply double-click the `start-ml-service.bat` file if you are on Windows!)*
-6. **Leave this terminal window open!**
+## Step 2: Clone the Repository
+Clone the monorepo that contains all three services:
+```bash
+git clone https://github.com/Shagun812/orca.git
+cd orca
+```
 
 ---
 
-##  Step 3: Start the Databases
-ORCA uses a database to store cases and a memory cache to process data fast. We use Docker to spin these up instantly without any complex setup.
+## Step 3: Start the Databases (Docker)
 
-1. Open a **new** terminal window.
-2. Navigate to the `orca/WEBSITE` folder.
+Our Rust Backend relies on PostgreSQL and PostGIS to store investigations, jobs, and spatial data.
+
+1. Navigate to the folder containing `docker-compose.yml` (currently `WEBSITE`):
    ```bash
-   cd path/to/orca/WEBSITE
-   ```
-3. Run the following command:
-   ```bash
+   cd WEBSITE
    docker-compose up -d
    ```
-   *What this does: It downloads and starts the PostgreSQL database and Redis server in the background.*
+*(Note: Make sure Docker Desktop is running before you execute this!)*
 
 ---
 
-##  Step 4: Start the Backend Server
-The backend is the "brain" of the platform, written in Rust. It talks to the database and processes our data.
+## Step 4: Run the AI/ML Engine (Python)
 
-1. Keep your terminal open and navigate into the `backend` folder:
+ORCA uses a Python FastAPI service for attribution ranking, drift forecasting, and spill detection models.
+
+1. Navigate to the `orca-ai` directory:
    ```bash
-   cd backend
+   cd orca-ai
    ```
-2. Start the server by running:
+2. Create and activate a virtual environment:
    ```bash
-   cargo run
+   uv venv
+   # On Windows:
+   .venv\Scripts\activate
+   # On Mac/Linux:
+   source .venv/bin/activate
    ```
-   *What this does: The first time you run this, it will download necessary packages and compile the code. This might take a few minutes. When it finishes, it will say the server is listening/running.*
-3. **Leave this terminal window open!** If you close it, the backend turns off.
+3. Install dependencies and start the service on port 8000:
+   ```bash
+   uv pip install -r requirements.txt
+   uvicorn app.main:app --reload --port 8000
+   ```
+*(Leave this terminal window open!)*
 
 ---
 
-##  Step 5: Start the Frontend Interface
-The frontend is the beautiful user interface you see in your browser.
+## Step 5: Run the Backend Server (Rust)
 
-1. Open a **brand new** Terminal window.
-2. Navigate to the `orca/WEBSITE/frontend` folder:
+The Rust backend securely orchestrates telemetry data and proxies requests to the ML service.
+
+1. Open a new terminal and navigate to the `orca-backend` directory:
    ```bash
-   cd path/to/orca/WEBSITE/frontend
+   cd orca-backend
    ```
-3. Install the required website packages by running:
+2. Start the server on port 3000:
+   ```bash
+   # Set the environment variable so it doesn't conflict with frontend
+   # On Windows (PowerShell):
+   $env:PORT=3000; cargo run
+   # On Mac/Linux:
+   PORT=3000 cargo run
+   ```
+*(Leave this terminal window open!)*
+
+---
+
+## Step 6: Run the Frontend (React + Vite)
+
+The frontend is a dynamic, high-performance UI built with React.
+
+1. Open a new terminal and navigate to the `orca-frontend` directory:
+   ```bash
+   cd orca-frontend
+   ```
+2. Install dependencies and run the development server:
    ```bash
    npm install
-   ```
-4. Start the website by running:
-   ```bash
    npm run dev
    ```
-   *What this does: It boots up a local web server for the user interface.*
-5. **Leave this terminal window open!**
+3. Open your browser and go to `http://localhost:5173` to launch ORCA!
 
 ---
 
-##  Step 6: Launch the App!
-You're done! 
+## Hosting Guide
 
-1. Open your favorite web browser (Chrome, Safari, Edge, etc.).
-2. In the address bar at the top, type:
-   ```text
-   http://localhost:5173
-   ```
-3. Hit Enter. You should now see the beautiful ORCA Landing Page!
+If you want to host ORCA publicly, here is how you can deploy each service from the monorepo:
 
----
+### 1. Hosting the Frontend (Vercel)
+- The frontend is production-ready and has zero build errors.
+- Go to [Vercel](https://vercel.com/), connect your GitHub account, and select the `Shagun812/orca` repository.
+- **Important**: In the Vercel project settings, set the **Root Directory** to `orca-frontend`. 
+- Vercel will automatically detect Vite and run `npm run build`. 
+- Set any required Environment Variables (like your deployed Backend API URL) in the Vercel Dashboard before hitting Deploy.
 
-###  Troubleshooting
-* **"Command not found"**: If your terminal says it doesn't recognize `cargo`, `npm`, `uv`, or `docker`, make sure you installed the software in Step 1 and **restarted your computer** so the terminal recognizes them.
-* **Database errors**: Make sure Docker Desktop application is currently open and running on your computer before typing `docker-compose up -d`.
+### 2. Hosting the Backend (Render / Railway / AWS)
+- You can host the Rust backend on platforms like Render or Railway.
+- Connect your GitHub repo, set the root directory to `orca-backend`.
+- Provide the database connection string (`DATABASE_URL`) from a managed PostgreSQL database (e.g., Supabase, Neon, or Render Postgres).
+
+### 3. Hosting the AI/ML Engine (Google Cloud Run / AWS EC2)
+- Since the AI engine requires running ML models and geographic algorithms, it is best containerized using the provided `Dockerfile` inside `orca-ai`.
+- You can deploy the Docker image to **Google Cloud Run**, **Railway**, or host it directly on an **AWS EC2** instance.
+- Ensure the Rust backend's environment variables are updated to point to this deployed ML service URL instead of `http://127.0.0.1:8000`.
